@@ -553,7 +553,9 @@ void  MonitoringManager::RunTemplateFit(string scale)
     if(isgoodfit && fitscale!=0)
     {
       it_bin->SetVariable("scale_"+scale,    1./fitscale);
-      it_bin->SetVariable("scale_unc_"+scale, fitfunc->GetParError(1) / fitscale / fitscale);
+      if (fitfunc->GetParError(1) / fitscale / fitscale > 0.001)  it_bin->SetVariable("scale_unc_"+scale, fitfunc->GetParError(1) / fitscale / fitscale);
+      else  it_bin->SetVariable("scale_unc_"+scale, 0.001 );
+
     }
     else
     {
