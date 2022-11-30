@@ -30,6 +30,8 @@ def SetAxisTitle(axis,name):
         axis.SetTitle("Integrated luminosity (fb^{-1})")
     elif "median" in name:
         axis.SetTitle("E/p scale (median)")
+        if "mee" in name:
+            axis.SetTitle("Mee scale (median)")
     elif "mean" in name:
         axis.SetTitle("E/p scale (mean)")
     elif "template" in name:
@@ -120,6 +122,9 @@ import ROOT as ROOT
 ROOT.gROOT.SetBatch(1)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning #switch off 'Info in <TCanvas::Print>: blabla'
 
+#ROOT.Math.MinimizerOptions.SetDefaultMinimizer("Minuit2", "Fumili2")
+ROOT.Math.MinimizerOptions.SetDefaultStrategy(2) #help converging fit with almost flat slope
+
 #build the dictionary of the TChains
 print "building the chains"
 chain_dict = {}
@@ -163,73 +168,83 @@ if options.LinearFit:
         start_run = (ROOT.TTimeStamp(2017,6,15,2,2,2)).AsDouble()#beginning of run 315257 (runA)
         end_run = (ROOT.TTimeStamp(2018,12,30,23,59,59)).AsDouble()
     elif("lumi" in options.xname):
-        start_run = 1.
-        end_run   = 100.
+        start_run = 4.
+        end_run   = 10.
  
+    nTrialsMax = 10
     for harnessname, graph in graph_dict.items():
         #print ">>>>>>> Fit harness "+harnessname
         if (graph.GetN() == 0):
             #print ">>>>>>> Empty graph"
             continue
         
+        NormalizeGraph(graph,[1]) 
         minDate = ROOT.TMath.MinElement(graph.GetN(),graph.GetX())
         maxDate = ROOT.TMath.MaxElement(graph.GetN(),graph.GetX())
 
         fit_func[harnessname] = ROOT.TF1("fitfunc_"+harnessname,"[0]+[1]*x",minDate - 0.07*(maxDate-minDate), maxDate + 0.07*(maxDate-minDate))
         fit_func[harnessname].SetParName(0,"intercept")
-        fit_func[harnessname].SetParName(1,"slope (1/fb^{-1})")
+
+        if ("time" in options.xname): fit_func[harnessname].SetParName(1,"slope (1/s)")
+        elif("lumi" in options.xname):fit_func[harnessname].SetParName(1,"slope (1/fb^{-1})")
 
         fStatus = 1
         nTrials = 0
-        while( fStatus!=3 and nTrials<10 ):
+        while( fStatus!=3 and nTrials<nTrialsMax ):
             rp = graph.Fit(fit_func[harnessname], "RSQME")
             p0_map[harnessname] = fit_func[harnessname].Eval(start_run)
             fStatus=rp.CovMatrixStatus()
-            ++nTrials
-            #if(fStatus==3):
-                #print ">>>>>>> Converged after %i trials"%nTrials
             
-            nTrials = 0
+            nTrials += 1
+            #print nTrials
+            if(fStatus==3):
+                print ">>>>>>> Converged after %i trials"%nTrials
             if (fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF() < 1 or fStatus == 2):
-                print "[WARNING]: harness %s -> points very close to the line --> matrix not pos def"%harnessname
+                if (nTrials == nTrialsMax):    
+                  print "[WARNING]: harness %s -> points very close to the line --> matrix not pos def"%harnessname
             else:
-                if (fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF() > 1000 or fStatus != 3):
+                if (fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF() > 6 or fStatus != 3): #was 1000 before
                     print ">>>>>>> harness %s -> Bad chisquare"%harnessname
                     fit_func[harnessname].SetParameter(0, 15.)
-                    fit_func[harnessname].SetParameter(1, -8e-10)
+                    fit_func[harnessname].SetParameter(1, -8e-10 ) 
                     while (fStatus != 3 and nTrials < 10):
                         rp = graph.Fit(fit_func[harnessname], "RSQME")
                         p0_map[harnessname] = fit_func[harnessname].Eval(start_run)
                         fStatus=rp.CovMatrixStatus()
-                        ++nTrials
+                        nTrials += 1
+                        print nTrials
                         #if(fStatus==3):
-                        #    cout<<">>>>>>> Converged after "<<nTrials+10<<" trials"<<endl
+                        #    print ">>>>>>> Converged after %i trials"%nTrials
                     if(fStatus != 3):
                         print ">>>>>>> harness %s -> NOT Converged"%harnessname
 
     #Fill histos
     print "Filling histos"
     h_chi2 =   ROOT.TH1F("h_chi2", "Reduced #Chi^{2} distribution; #Chi^{2}/NDF); ", 100, 0, 22)
+    h2_slope_chi2 = ROOT.TH2F("h2_slope_chi2", "; Fit slope map; #Chi^{2}/NDF", 100, -20.e-09, 30.e-09,100, 0, 22)
     h2_slope = ROOT.TH2F("map", "Fit slope map; i#phi; i#eta", 360,0.5,360.5,171,-85.5,85.5)
     h2_chi2 =  ROOT.TH2F("m_chi2", "Fit #chi^{2} map; i#phi; i#eta", 360,0.5,360.5,171,-85.5,85.5)
     h2_p0 = ROOT.TH2F("m_p0", "Fit intercept map; i#phi; i#eta", 360,0.5,360.5,171,-85.5,85.5)
     h_etaring_slope = ROOT.TH1D("etaring_slope", "etaring_slope; i#eta; <slope>", 233, -116.5, 116.5)
     h_etaring_p0 = ROOT.TH1D("etaring_p0", "etaring_p0; i#eta; <slope>", 233, -116.5, 116.5)
 
+
     if("lumi" in options.xname):
         h_slope = ROOT.TH1F("h_slope", "", 100, -3.e-3, 2.e-3)
         h_p0 = ROOT.TH1F ("h_p0", "Fit intercept distribution; P_{0}", 100, 0.95,1.05)
     else:
-        h_slope = ROOT.TH1F("h_slope", "", 100, -5.e-09, 2.e-09)
+        h_slope = ROOT.TH1F("h_slope", "", 100, -20.e-09, 30.e-09)
         h_p0 = ROOT.TH1F ("h_p0", "Fit intercept distribution; P_{0}", 100, -1,3)
 
     os.system("mkdir -p %s/fit/"%outdir)
+    #os.system("cp index.php %s/fit/"%outdir)
 
     for harnessname, graph in graph_dict.items():
 
         #Fill 1D histos
         h_slope.Fill(fit_func[harnessname].GetParameter(1))		
         h_chi2.Fill(fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF())		
+        h2_slope_chi2.Fill(fit_func[harnessname].GetParameter(1), fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF())
         Npoints=graph.GetN()
         h_p0.Fill(fit_func[harnessname].GetParameter(0))
 
@@ -242,6 +257,7 @@ if options.LinearFit:
                 h2_slope.SetBinContent(ibin, fit_func[harnessname].GetParameter(1))
                 h2_chi2.SetBinContent(ibin, fit_func[harnessname].GetChisquare() / fit_func[harnessname].GetNDF())
                 h2_p0.SetBinContent(ibin, p0_map[harnessname])
+
 
     #Draw plots
     print "Drawing histos"
@@ -260,8 +276,9 @@ if options.LinearFit:
     cslope.Print(outdir+"/fit/slope_map.png")	
     cslope.Print(outdir+"/fit/slope_map.root")		
 
+
     if "time" in options.xname:
-        h2_slope.GetZaxis().SetRangeUser(-12.e-09,3.e-9)
+        h2_slope.GetZaxis().SetRangeUser(-20.e-09,30.e-9)
     else:
         h2_slope.GetZaxis().SetRangeUser(-1.e-3,1.e-3)
 
@@ -277,7 +294,7 @@ if options.LinearFit:
     c_slope.Print(outdir+"/fit/h_slope.pdf")	
     c_slope.SaveAs(outdir+"/fit/h_slope.root")	
     c_slope.Print(outdir+"/fit/h_slope.png")	
-   
+
     
     c_p0_h = ROOT.TCanvas("c_p0_h","c_p0_h", 1400, 700)
     c_p0_h.cd()
@@ -307,12 +324,21 @@ if options.LinearFit:
     c_chi2_m.Print(outdir+"/fit/chi2_distr.pdf")	
     c_chi2_m.Print(outdir+"/fit/chi2_distr.png")	
 
+    c_chi2_slope_m = ROOT.TCanvas()
+    c_chi2_slope_m.cd()
+    h2_slope_chi2.Draw("colz")
+    c_chi2_slope_m.Print(outdir+"/fit/chi2Slope_corr.pdf")	
+    c_chi2_slope_m.Print(outdir+"/fit/chi2Slope_corr.png")	
+
+
 ################################################################################################################
 ################################################################################################################
 
 if options.DrawDefaultPlots:
     c = ROOT.TCanvas()
+    c.SetGrid()
     os.system("mkdir %s/defaultplots"%outdir)
+    #os.system("cp index.php %s/defaultplots"%outdir)
     for harnessname, chain in chain_dict.items():
         #print harnessname+" - "+str(chain.GetEntries())
         if chain.GetEntries()<=0: 
@@ -392,8 +418,11 @@ if options.DrawDefaultPlots:
 if options.DrawPlots:
     print "Drawing y vs x graphs"
     os.system("mkdir -p %s/fit/EBm/"%outdir)
+    #os.system("cp index.php  %s/fit/EBm/"%outdir)
     os.system("mkdir -p %s/fit/EBp/"%outdir)
+    #os.system("cp index.php  %s/fit/EBp/"%outdir)
     c = ROOT.TCanvas()
+    c.SetGrid()
     for harnessname, graph in graph_dict.items():
         if graph.GetN()==0: continue
     
@@ -404,6 +433,7 @@ if options.DrawPlots:
         graph.SetMarkerStyle(20)
         graph.Draw("AP")
         graph.GetXaxis().SetLimits( xmin_graph-0.07*(xmax_graph-xmin_graph), xmax_graph+0.07*(xmax_graph-xmin_graph))
+        #graph.GetYaxis().SetRangeUser( 0.98, 1.02) #setting RANGE HARCODED
         if("time" in options.xname):
             graph.GetXaxis().SetTimeFormat("%d/%m%F1970-01-01 00:00:00")
             graph.GetXaxis().SetTimeDisplay(1)
@@ -416,8 +446,7 @@ if options.DrawPlots:
         if ietamin<0:
             #        c.Print("%s/fit/EBm/%s.pdf"%(outdir,harnessname))
             c.Print("%s/fit/EBm/%s.png"%(outdir,harnessname))
-            if ietamin==-25 and iphimin==41:
-                c.SaveAs("%s/fit/EBm/%s.root"%(outdir,harnessname))
+            #        c.SaveAs("%s/fit/EBm/%s.root"%(outdir,harnessname))
             #        c.SaveAs("%s/fit/EBm/%s.C"%(outdir,harnessname))
         else: 
             #        c.Print("%s/fit/EBp/%s.pdf"%(outdir,harnessname))

@@ -16,13 +16,11 @@ def findFiles(ntuple_dir,ntuples_type,tag_list,ignored_ntuples_label_list,select
     for root, dirs, files in os.walk(ntuple_dir):
         for file in files:
             if type_match(file,ntuples_type):
-                if os.path.join(root, file).find("WSkim")!=-1 or os.path.join(root, file).find("ZSkim")!=-1:
-                    if (any (tag in os.path.join(root, file) for tag in tag_list)):
-                        if(not any (ignored_ntuples_label in os.path.join(root, file) for ignored_ntuples_label in ignored_ntuples_label_list)):
-                            if file.find("extraCalibTree-")==-1:
-                                selected_filelist.append(os.path.join(root, file))
-                                extracalibtree_filename = generate_extracalibtree_filename(file,ntuples_type)
-                                extracalibtree_filelist.append(os.path.join(root, extracalibtree_filename))
+                if(not any (ignored_ntuples_label in os.path.join(root, file) for ignored_ntuples_label in ignored_ntuples_label_list)):
+                    if file.find("extraCalibTree")==-1:
+                        selected_filelist.append(os.path.join(root, file))
+                        extracalibtree_filename = generate_extracalibtree_filename(file,ntuples_type)
+                        extracalibtree_filelist.append(os.path.join(root, extracalibtree_filename))
     return selected_filelist,extracalibtree_filelist
 
 
@@ -40,8 +38,9 @@ def type_match(filename,ntuples_type):
         else:
             return False
     if ntuples_type=="unmerged":
-        if filename.startswith("ntuple-"):
+        if filename.startswith("ntuple"):
             return True
+
         else:
             return False
 
@@ -50,7 +49,8 @@ def type_match(filename,ntuples_type):
 def generate_extracalibtree_filename(filename,ntuples_type):
     filenamecopy = filename
     if ntuples_type=="unmerged":
-        return filenamecopy.replace("ntuple-","extraCalibTree-")
+        if filename.startswith("ntuple_"): return filenamecopy.replace("ntuple_","extraCalibTree_")
+        if filename.startswith("ntuple-"): return filenamecopy.replace("ntuple-","extraCalibTree-")
     else:
         return ("extraCalibTree-"+filenamecopy)
 
