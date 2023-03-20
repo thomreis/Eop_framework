@@ -11,7 +11,6 @@ import time
 import datetime
 from ecalautoctrl import RunCtrl
 
-
 def findStartEndRun(dbname, campaign, era):
     rctrl = RunCtrl(dbname=dbname, campaign=campaign)
 
