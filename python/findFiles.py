@@ -9,9 +9,79 @@ import subprocess
 from optparse import OptionParser
 import time
 import datetime
+from ecalautoctrl import RunCtrl
+
+def findFilesAutoEra(dbname, campaign, era, selected_filelist_era=[]):
+    selected_filelist_era=[]
+
+    rctrl = RunCtrl(dbname=dbname, campaign=campaign)
+    #print (era)
+
+    ecalelf = set()
+
+    if "2022C" in era:
+        #print ("This is a C --> ECCOME QUA" )
+        ecalelf.update(rctrl.getOutput(era = era,  process='ecalelf-ntuples'))
+
+    elif "2022D" in era:
+        #print ("This is a D --> ECCOME QUA" )
+        ecalelf.update(rctrl.getOutput(era = era,  process='ecalelf-ntuples'))
+
+    else:
+        #print("This is a E-F --> so parsing wskim and zskim ECCOME QUA") 
+        ecalelf.update(rctrl.getOutput(era = era, process='ecalelf-ntuples-wskim'))
+        ecalelf.update(rctrl.getOutput(era = era, process='ecalelf-ntuples-zskim'))
 
 
-def findFiles(ntuple_dir,ntuples_type,tag_list,ignored_ntuples_label_list,selected_filelist=[],extracalibtree_filelist=[]):
+    #print ("------------------- ECALELF  ------------------------------------")
+    #print (ecalelf)
+
+    for ntupla in ecalelf:
+        #print ("------------------- TUPLA ------------------------------------")
+        #print (ntupla)
+
+        for f in ntupla.split(','):
+            #print ("------------------- FILETTO  ------------------------------------")
+            #print (f)
+
+            if "ntuple" in f: 
+                selected_filelist_era.append(f)
+
+    
+    return selected_filelist_era
+
+
+
+def findFilesAuto(dbname, campaign, eras, groupbyeras, selected_filelist=[],extracalibtree_filelist=[]):
+    selected=""
+    extracalibtree=""
+
+    for era in eras:
+        selected_filelist_era = findFilesAutoEra(dbname, campaign, era)
+        #print (era, "Getting :: ", selected_filelist_era )
+
+        for filename in selected_filelist_era: 
+            selected += "%s \\ \n" %filename
+            extrafilename = filename.replace("ntuple","extraCalibTree")
+            #print ("Generated extracalib :: %s"%extrafilename)
+            extracalibtree += "%s \\ \n" %extrafilename
+
+        if (groupbyeras):
+           selected_filelist.append(selected)
+           extracalibtree_filelist.append(extracalibtree)
+           selected = ""
+           extracalibtree = ""
+
+    if not groupbyeras:
+        selected_filelist.append(selected)
+        extracalibtree_filelist.append(extracalibtree)          
+    
+    #print ("Finished, now returning to main ...")
+    return selected_filelist,extracalibtree_filelist
+
+
+
+def findFiles(ntuple_dir,ntuples_type,ignored_ntuples_label_list,selected_filelist=[],extracalibtree_filelist=[]):
     #get ntuples for the calibration
     for root, dirs, files in os.walk(ntuple_dir):
         for file in files:
@@ -55,7 +125,7 @@ def generate_extracalibtree_filename(filename,ntuples_type):
         return ("extraCalibTree-"+filenamecopy)
 
 def groupFiles(selected_filelist, extracalibtree_filelist, Nfiles_per_group):
-    print "grouping "+str(len(selected_filelist))+" files in groups of "+str(Nfiles_per_group)+" units"
+    print ( "grouping "+str(len(selected_filelist))+" files in groups of "+str(Nfiles_per_group)+" units")
     grouped_selected_filelist = []
     grouped_extracalibtree_filelist = []
     
@@ -63,12 +133,16 @@ def groupFiles(selected_filelist, extracalibtree_filelist, Nfiles_per_group):
     selected_filename_group_str=""
     extracalibtree_filename_group_str=""
     for ifile in range(0,len(selected_filelist)):
-
         if Nfiles_in_group<Nfiles_per_group-1:#append file
             selected_filename_group_str += selected_filelist[ifile]+" \\ \n"
             extracalibtree_filename_group_str += extracalibtree_filelist[ifile]+" \\ \n"
             Nfiles_in_group=Nfiles_in_group+1
+            if ifile==len(selected_filelist)-1:#append file, close, and reset (in case u have less than Nfiles_per_group in the last group)
+                   print("IM THE LAST ONE")
+                   grouped_selected_filelist.append(selected_filename_group_str)
+                   grouped_extracalibtree_filelist.append(extracalibtree_filename_group_str)
 
+           
         elif Nfiles_in_group==Nfiles_per_group-1:#append file, close, and reset
                 selected_filename_group_str += selected_filelist[ifile]
                 extracalibtree_filename_group_str += extracalibtree_filelist[ifile]
@@ -78,12 +152,12 @@ def groupFiles(selected_filelist, extracalibtree_filelist, Nfiles_per_group):
                 selected_filename_group_str=""
                 extracalibtree_filename_group_str=""
 
-    print str(len(grouped_selected_filelist))+" groups created"
+    print( str(len(grouped_selected_filelist))+" groups created")
     return grouped_selected_filelist, grouped_extracalibtree_filelist
 
 def groupFilesByTag(selected_filelist, extracalibtree_filelist, tag_list):
-    print "grouping "+str(len(selected_filelist))+" files in groups sharing the same value among the following "
-    print tag_list
+    print( "grouping "+str(len(selected_filelist))+" files in groups sharing the same value among the following ")
+    print( tag_list)
     grouped_selected_filelist = []
     grouped_extracalibtree_filelist = []
     
@@ -102,8 +176,8 @@ def groupFilesByTag(selected_filelist, extracalibtree_filelist, tag_list):
             grouped_selected_filelist.append(selected_filename_group_str)
             grouped_extracalibtree_filelist.append(extracalibtree_filename_group_str)
         else:
-            print "[WARNING]: can't find any file matching "+tag+" tag"
-    print str(len(grouped_selected_filelist))+" groups created"
+            print ( "[WARNING]: can't find any file matching "+tag+" tag")
+    print (str(len(grouped_selected_filelist))+" groups created")
     return grouped_selected_filelist, grouped_extracalibtree_filelist
 
     
