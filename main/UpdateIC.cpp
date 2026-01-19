@@ -62,10 +62,10 @@ int main(int argc, char* argv[])
   //Load new (incomplete) ICs
   cout<<">> Reading new numerator and denominator from "<<newFileName.Data()<<endl;
   TFile newFile(newFileName.Data(),"UPDATE");
-  TH2D* numerator = (TH2D*)newFile.Get("numerator");
-  TH2D* denominator = (TH2D*)newFile.Get("denominator");
-  TH2D* ICpull = (TH2D*)newFile.Get("ICpull");
-  TH2D* temporaryIC = (TH2D*)newFile.Get("temporaryIC");
+  TH2D* numerator = (TH2D*)newFile.Get("numeratorEB");
+  TH2D* denominator = (TH2D*)newFile.Get("denominatorEB");
+  TH2D* ICpull = (TH2D*)numerator->Clone("ICpull");//the initial content does not matter 
+  TH2D* temporaryIC = (TH2D*)newFile.Get("temporaryICEB");
 
   //Reset objects that are in general wrongly filled by hadd
   ICpull->Reset();

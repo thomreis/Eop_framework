@@ -208,9 +208,17 @@ int main(int argc, char **argv)
   {
     // open files
     TFile* inFile = new TFile(inFileName.c_str(), "READ");
-    h2_IC_raw[0] = (TH2F*)( inFile->Get("IC") );
+    TH2F* h2_IC_tmp = (TH2F*)( inFile->Get("IC") );
+    h2_IC_raw[0] = new TH2F( "shiftedICmap", "shiftedICmap", 360, 1, 361, 171, -85, 86);
     h2_IC_raw[0] ->SetDirectory(0);
-    inFile->Close();
+    for( int xbin=1; xbin<361; ++xbin ) {
+      for( int ybin=1; ybin<172; ++ybin ) {
+	double v = h2_IC_tmp->GetBinContent(xbin, ybin);
+	h2_IC_raw[0]->SetBinContent(xbin, ybin, v);
+      }
+    }
+    inFile->Close();      
+    
     h2_IC_raw_phiNorm[0] = (TH2F*)( h2_IC_raw[0]->Clone("h2_IC_raw_phiNorm_EB") );
     h2_IC_raw_phiNorm[0] -> Reset("ICEMS");
     h2_IC_raw_phiNorm[0] -> ResetStats();
@@ -226,13 +234,28 @@ int main(int argc, char **argv)
       TFile* inFileEven = new TFile(inFileNameEven.c_str(), "READ");
       TFile* inFileOdd = new TFile(inFileNameOdd.c_str(), "READ");
 
-      h2_ICEven_raw[0] = (TH2F*)( inFileEven->Get("IC") );
-      h2_ICOdd_raw[0]  = (TH2F*)( inFileOdd ->Get("IC") );
+      TH2F* h2_ICEven_tmp = (TH2F*)( inFileEven->Get("IC") );
+      h2_ICEven_raw[0] = new TH2F( "shiftedICmapEven", "shiftedICmapEven", 360, 1, 361, 171, -85, 86);
       h2_ICEven_raw[0] ->SetDirectory(0);
-      h2_ICOdd_raw[0] ->SetDirectory(0);
-      inFileEven->Close();
-      inFileOdd->Close();
+      for( int xbin=1; xbin<361; ++xbin ) {
+	for( int ybin=1; ybin<172; ++ybin ) {
+	  double v = h2_ICEven_tmp->GetBinContent(xbin, ybin);
+	  h2_ICEven_raw[0]->SetBinContent(xbin, ybin, v);
+	}
+      }
+      inFileEven->Close();      
 
+      TH2F* h2_ICOdd_tmp = (TH2F*)( inFileOdd->Get("IC") );
+      h2_ICOdd_raw[0] = new TH2F( "shiftedICmapOdd", "shiftedICmapOdd", 360, 1, 361, 171, -85, 86);
+      h2_ICOdd_raw[0] ->SetDirectory(0);
+      for( int xbin=1; xbin<361; ++xbin ) {
+	for( int ybin=1; ybin<172; ++ybin ) {
+	  double v = h2_ICOdd_tmp->GetBinContent(xbin, ybin);
+	  h2_ICOdd_raw[0]->SetBinContent(xbin, ybin, v);
+	}
+      }
+      inFileOdd->Close();      
+      
       h2_IC_raw_phiNorm_even[0] = (TH2F*)( h2_ICEven_raw[0]->Clone("h2_IC_raw_phiNorm_even_EB") );
       h2_IC_raw_phiNorm_even[0] -> Reset("ICEMS");
       h2_IC_raw_phiNorm_even[0] -> ResetStats();

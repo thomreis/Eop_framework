@@ -21,7 +21,7 @@ current_dir = os.getcwd();
 ntuple_dir = "/eos/cms/store/group/dpg_ecal/alca_ecalcalib/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_newRegV1/"#parent folder containing all the ntuples of interest
 #ntuple_dir = "/eos/cms/store/group/dpg_ecal/alca_ecalcalib/ecalelf/ntuples/13TeV/ALCARERECO/102X_dataRun2_Sep2018Rereco_harnessCorr_newReg/"
 #ntuple_dir="/home/fabio/work/Eop_framework/data/"
-tag_list = ["Run2016B","Run2016C","Run2016D","Run2016E","Run2016F","Run2016G","Run2016H"]#tag for the monitoring = any label in the ntuple path identifying univoquely the ntuples of interest
+tag_list = ["Run2016C","Run2016D","Run2016E","Run2016F","Run2016G","Run2016H"]#tag for the monitoring = any label in the ntuple path identifying univoquely the ntuples of interest
 #tag_list = ["Run2017C"] #tag for the monitoring
 ignored_ntuples_label_list = ["obsolete"]#ntuples containing anywhere in the path these labels will be ignored (eg ntuples within a tag containing some error)
 
@@ -32,6 +32,7 @@ parser.add_option('--submit',          action='store_true',             dest='su
 parser.add_option("-l", "--label",     action="store",      type="str", dest="label",                               help="job label")
 parser.add_option("-v", "--verbosity", action="store",      type="int", dest="verbosity",       default=1,          help="verbosity level")
 parser.add_option("-o", "--outdir",    action="store",      type="str", dest="outdir",          default="./",       help="output directory")
+parser.add_option(      "--jobdir",    action="store",      type="str", dest="jobdir",          default="",         help="job directory, if not provided use current directory")
 parser.add_option("-e", "--exedir",    action="store",      type="str", dest="exedir",          default="./build/", help="executable directory")
 parser.add_option("-c", "--cfg",       action="store",      type="str", dest="configFile",                          help="template config file")
 parser.add_option("-N", "--Nloop",     action="store",      type="int", dest="Nloop",           default=15,         help="number of loop")
@@ -64,33 +65,37 @@ os.system("mkdir -p "+str(options.outdir))
 selected_filelist,extracalibtree_filelist = findFiles.findFiles(ntuple_dir,"unmerged",tag_list,ignored_ntuples_label_list)
 
 if (len(selected_filelist)>0):
-    print
+    print()
     print("Run calibration on "+str(len(selected_filelist))+" files:")
     if(options.verbosity>=1):
         print("-----------------------")
         for filename in selected_filelist:
-            print filename 
+            print(filename)
         print("-----------------------")
         print("auto-generated extraCalibTree filelist")
         for filename in extracalibtree_filelist:
-            print filename 
+            print(filename) 
         print("-----------------------")
 
 else:
-    print
+    print()
     print("NOT any file found --> EXIT")
     sys.exit()
 
 #if running on unmerged files i need to reduce the number of jobs to submit to a reasonable value --> Group the files together
 if len(selected_filelist)>200:
-    selected_filelist, extracalibtree_filelist = findFiles.groupFiles(selected_filelist, extracalibtree_filelist, int(len(selected_filelist)/100) )
+    selected_filelist, extracalibtree_filelist = findFiles.groupFiles(selected_filelist, extracalibtree_filelist, int(len(selected_filelist)/25) )
     if(options.verbosity>=1):
-        print "grouped files"
+        print("grouped files")
         for filename in selected_filelist:
-            print filename 
+            print(filename) 
 
 #create folder for the job
-job_parent_folder=current_dir+"/jobs/"+str(options.label)+"/"
+print(options)
+if str(options.jobdir)=="":
+    job_parent_folder=current_dir+"/jobs/"+str(options.label)+"/"
+else:
+    job_parent_folder=options.jobdir+"/jobs/"+str(options.label)+"/"
 os.system("mkdir -p "+job_parent_folder)
 
 #create the log folder
@@ -162,9 +167,9 @@ for iLoop in range(options.RestartFromLoop,options.Nloop):
                 outScript = open(outScriptName,"w")
                 outScript.write("#!/bin/bash\n")
                 #outScript.write('source setup.sh\n')
-                outScript.write("cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
-                outScript.write('eval `scram runtime -sh`\n');
-                outScript.write("cd -\n");
+                outScript.write("#cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
+                outScript.write('#eval `scram runtime -sh`\n');
+                outScript.write("#cd -\n");
                 outScript.write("echo $PWD\n");
                 outScript.write(
                     str(options.exedir)+"/"+task+".exe"+
@@ -200,9 +205,9 @@ for iLoop in range(options.RestartFromLoop,options.Nloop):
             mergescriptName=job_parent_folder+"/merge_"+task+"_loop_"+str(iLoop)+".sh"
             mergescript = open( mergescriptName,"w")
             mergescript.write("#!/bin/bash\n")
-            mergescript.write("cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
-            mergescript.write('eval `scram runtime -sh`\n');
-            mergescript.write("cd -\n");
+            mergescript.write("#cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
+            mergescript.write('#eval `scram runtime -sh`\n');
+            mergescript.write("#cd -\n");
             mergescript.write("hadd -f -k "+str(options.outdir)+"/EopEta_loop_"+str(iLoop)+".root "+str(options.outdir)+"/EopEta_loop_"+str(iLoop)+"_file_*_*.root\n")
             mergescript.write(str(options.exedir)+"/NormalizeBuildEopEta.exe --Eopweight TH2F EopEta "+str(options.outdir)+"/EopEta_loop_"+str(iLoop)+".root\n")
             mergescript.close()
@@ -211,9 +216,9 @@ for iLoop in range(options.RestartFromLoop,options.Nloop):
             mergescriptName=job_parent_folder+"/merge_"+task+"_loop_"+str(iLoop)+".sh"
             mergescript = open( mergescriptName,"w")
             mergescript.write("#!/bin/bash\n")
-            mergescript.write("cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
-            mergescript.write('eval `scram runtime -sh`\n');
-            mergescript.write("cd -\n");
+            mergescript.write("#cd /afs/cern.ch/work/f/fmonti/flashggNew/CMSSW_10_5_0/\n")
+            mergescript.write('#eval `scram runtime -sh`\n');
+            mergescript.write("#cd -\n");
             mergescript.write("hadd -f -k "+str(options.outdir)+"/IC_loop_"+str(iLoop)+".root "+str(options.outdir)+"/IC_loop_"+str(iLoop)+"_file_*_*.root\n")
             if iLoop==0:
                 mergescript.write(str(options.exedir)+"/UpdateIC.exe --newIC IC "+str(options.outdir)+"/IC_loop_"+str(iLoop)+".root\n")

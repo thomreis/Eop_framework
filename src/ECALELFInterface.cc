@@ -67,7 +67,7 @@ ECALELFInterface::ECALELFInterface(CfgManager conf):
   std::vector<std::string> treelist = conf.GetOpt<std::vector<std::string> >("Input.treelist");
   for(auto treename : treelist)
   { 
-    ch_[treename] = new TBetterChain(treename.c_str(),treename.c_str());
+    ch_[treename] = new TChain(treename.c_str(),treename.c_str());
     std::vector<std::string> filelist = conf.GetOpt<std::vector<std::string> >(Form("Input.%s.filelist",treename.c_str()));
     for(auto filename : filelist)
       ch_[treename]->Add(filename.c_str());
@@ -85,7 +85,7 @@ ECALELFInterface::ECALELFInterface(CfgManager conf):
   {
     cout << ">>> Adding chain " << treelist.at(nchain) << " as friend to chain " << treelist.at(0) << endl;
     assert(Nentries == ch_[treelist.at(nchain)]->GetEntries());
-    ch_[treelist.at(0)]->AddFriend(treelist.at(nchain).c_str(),"");
+    ch_[treelist.at(0)]->AddFriend(ch_[treelist.at(nchain)],"");
     //ch_[treelist.at(0)]->BuildIndex("runNumber","eventNumber");
   }
   chain_=ch_[treelist.at(0)];

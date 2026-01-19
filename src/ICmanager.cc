@@ -102,16 +102,19 @@ IC ICmanager::GetICFromTH2D(TH2D* ICmap, const int &iz)
 {
   IC icvalues;
   bool toshift = (ICmap->GetXaxis()->GetXmin() == 1);
-  for(int xbin=1; xbin<ICmap->GetXaxis()->GetXmax()+1; ++xbin)
+  for(int xbin=1; xbin<ICmap->GetNbinsX()+1; ++xbin)
   {
     int ix = (int) (ICmap->GetXaxis()->GetBinCenter(xbin) - 0.5*toshift);
-    for(int ybin=1; ybin<ICmap->GetYaxis()->GetXmax()+1; ++ybin)
+    for(int ybin=1; ybin<ICmap->GetNbinsY()+1; ++ybin)
     {
       int iy = (int) (ICmap->GetYaxis()->GetBinCenter(ybin) - 0.5*toshift);
-      if(iz==0)//for barrel, for historical reason, in the th2f ix(ieta) and iy(iphi) are inverted 
+      if(iz==0) { //for barrel, for historical reason, in the th2f ix(ieta) and iy(iphi) are inverted 
 	icvalues[iy][ix][iz] = ICmap->GetBinContent(xbin,ybin);
+      }
       else
 	icvalues[ix][iy][iz] = ICmap->GetBinContent(xbin,ybin);
+
+      
     }
   }
   return icvalues;
@@ -231,11 +234,11 @@ TH2D* ICmanager::GetPulledIC(TH2D* h2_ICpull, const int &iz)
       int ix,iy;
       if(iz==0)
       {
-	ix=h2_ICpull->GetYaxis()->GetBinCenter(xbin) - 0.5*toshift;
-	iy=h2_ICpull->GetXaxis()->GetBinCenter(ybin) - 0.5*toshift;
+	iy=h2_ICpull->GetXaxis()->GetBinCenter(xbin) - 0.5*toshift;
+	ix=h2_ICpull->GetYaxis()->GetBinCenter(ybin) - 0.5*toshift;
       }
       else
-      {
+      {   
 	ix=h2_ICpull->GetXaxis()->GetBinCenter(xbin) - 0.5*toshift;
 	iy=h2_ICpull->GetYaxis()->GetBinCenter(ybin) - 0.5*toshift;
       }
