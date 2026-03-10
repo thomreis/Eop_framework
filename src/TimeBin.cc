@@ -137,7 +137,7 @@ void TimeBin::SetNev(const int &Nev_bin)
   Nev_=Nev_bin;
 }
 
-TimeBin& TimeBin::operator=(const TimeBin& other)
+void TimeBin::operator=(const TimeBin& other)
 {
   runmin_       = other.runmin_;
   runmax_       = other.runmax_;

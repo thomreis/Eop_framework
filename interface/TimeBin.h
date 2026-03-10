@@ -13,7 +13,6 @@ using namespace std;
 
 class TimeBin
 {
-  
  public:
 
   //---ctors---
@@ -34,7 +33,7 @@ class TimeBin
   bool     operator<(const TimeBin& other) const;
   void     BranchOutput(TTree* outtree);
   void     BranchInput(TTree* intree);
-  TimeBin& operator=(const TimeBin& other);
+  void     operator=(const TimeBin& other);
   bool     Match(const UInt_t &run, const UShort_t &ls, const UInt_t &time) const;
   bool     Match(const UInt_t &run, const UShort_t &ls) const;
   void     FillHisto(double x) const {h_scale_->Fill(x);} ;
@@ -63,6 +62,7 @@ class TimeBin
   float    GetVariable(const std::string &variablename){return variablelist_[variablename];};
   void     PrintVariables();  
   void     UpdateNev();
+
  protected:
   UInt_t runmin_;
   UInt_t runmax_;
@@ -75,7 +75,5 @@ class TimeBin
   int Nev_;
   TH1F* h_scale_;
   std::map<std::string,float> variablelist_;
-
-
 };
 #endif
