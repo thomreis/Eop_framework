@@ -74,8 +74,11 @@ namespace FitUtils
       c_template_fit.cd();
       rp = h -> Fit(fitfunc, fitopt.c_str());
       fStatus = rp;
-      if(fStatus != 4 && fitfunc->GetParError(1) != 0. )
+      //std::cout << "nTrial: " << nTrial << "--> fstatus: " << fStatus << std::endl;
+
+      if(fStatus != 4 && fitfunc->GetParError(1) != 0. && fitfunc->GetParameter(1) != 0.99)
       {
+        //std::cout << "So I'm HERE goodfit!!!!! " << std::endl;
 	if(TemplatePlotsFolder!="")
 	{
 	  c_template_fit.Print( Form("%s/fit_%s.png",TemplatePlotsFolder.c_str(), h->GetName()) );
@@ -89,6 +92,7 @@ namespace FitUtils
       c_template_fit.Print( Form("%s/fit_%s.png",TemplatePlotsFolder.c_str(), h->GetName()) );
       c_template_fit.SaveAs( Form("%s/fit_%s.root",TemplatePlotsFolder.c_str(), h->GetName()) );
     }
+    //std::cout << "OH NO --- NOT a goodfit " << std::endl;
     return false;
   }
 
