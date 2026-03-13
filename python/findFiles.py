@@ -14,16 +14,11 @@ from ecalautoctrl import RunCtrl
 def findStartEndRun(dbname, campaign, era):
     rctrl = RunCtrl(dbname=dbname, campaign=campaign)
 
-    if "2022C" in era:
-        print("This is a C --> here")
+    if "2022C" in era or "2022D" in era:
+        print("This is a C or D --> here")
         start, end = (min(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples')), max(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples')))
-
-    elif "2022D" in era:
-        print("This is a D --> here")
-        start, end = (min(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples')), max(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples')))
-
     else:
-        print("This is a E-F --> so parsing wskim and zskim here")
+        print("This is a E-F or later --> so parsing wskim and zskim here")
         start, end = (min(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples-wskim')), max(rctrl.getRunsInEra(era=era, wflow='ecalelf-ntuples-wskim')))
 
 
@@ -37,19 +32,11 @@ def findFilesAutoEra(dbname, campaign, era, selected_filelist_era=[]):
 
     ecalelf = set()
 
-    if "2022C" in era:
-        #print("This is a C --> ECCOME QUA")
+    if "2022C" in era or "2022D" in era:
         ecalelf.update(rctrl.getOutput(era = era,  process='ecalelf-ntuples'))
-
-    elif "2022D" in era:
-        #print("This is a D --> ECCOME QUA")
-        ecalelf.update(rctrl.getOutput(era = era,  process='ecalelf-ntuples'))
-
     else:
-        #print("This is a E-F --> so parsing wskim and zskim ECCOME QUA") 
         ecalelf.update(rctrl.getOutput(era = era, process='ecalelf-ntuples-wskim'))
         ecalelf.update(rctrl.getOutput(era = era, process='ecalelf-ntuples-zskim'))
-
 
     #print("------------------- ECALELF  ------------------------------------")
     #print(ecalelf)
@@ -65,10 +52,7 @@ def findFilesAutoEra(dbname, campaign, era, selected_filelist_era=[]):
             if "ntuple" in f: 
                 selected_filelist_era.append(f)
 
-    
     return selected_filelist_era
-
-
 
 def findFilesAuto(dbname, campaign, eras, groupbyeras, selected_filelist=[],extracalibtree_filelist=[]):
     selected=""
